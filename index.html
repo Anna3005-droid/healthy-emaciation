@@ -37,7 +37,7 @@
 <div class="wrap">
   <header class="top">
     <div class="brand"><img class="mark" src="img/mark.png" alt="" width="50" height="39"><div class="word"><b>healthy</b><span>emaciation</span></div><div class="meta"><div class="eyebrow">Марафон · 35 днів</div><div class="who" id="who"></div></div></div>
-    <nav class="tabs" id="tabs" role="tablist" aria-label="Розділи">
+    <nav class="tabs" id="tabs" hidden role="tablist" aria-label="Розділи">
       <button class="tab" role="tab" data-tab="reg" id="t-reg" aria-selected="false">Анкета</button>
       <button class="tab" role="tab" data-tab="today" id="t-today" aria-selected="true">Сьогодні</button>
       <button class="tab" role="tab" data-tab="recipes" id="t-recipes" aria-selected="false">Рецепти</button>
@@ -46,17 +46,50 @@
   </header>
   <main>
     <p class="note" id="loading" style="text-align:center;padding-block:40px">Завантажуємо трекер…</p>
+
+    <!-- Вхід і реєстрація -->
+    <section id="auth" hidden>
+      <div class="card stack auth-card">
+        <div class="seg green" role="tablist" aria-label="Вхід або реєстрація">
+          <button type="button" role="tab" id="a-login" aria-pressed="true">Вхід</button>
+          <button type="button" role="tab" id="a-signup" aria-pressed="false">Реєстрація</button>
+        </div>
+        <h2 id="a-title">Вхід у <em>трекер</em></h2>
+        <p class="hello">Вітаємо в марафоні! <b>35 днів</b>, <b>24 тренування</b>, вода, кроки й смачні рецепти. Увійдіть зі своєю поштою, і ваші відмітки будуть на кожному пристрої.</p>
+        <form id="auth-form" class="stack" novalidate>
+          <label class="f" for="a-name" id="a-name-wrap" hidden>Ім’я та прізвище<input type="text" id="a-name" autocomplete="name" placeholder="Олена Коваль"></label>
+          <label class="f" for="a-email">Email<input type="email" id="a-email" autocomplete="email" inputmode="email" required placeholder="name@gmail.com"></label>
+          <label class="f" for="a-pass" id="a-pass-wrap">Пароль<input type="password" id="a-pass" autocomplete="current-password" minlength="6" required placeholder="Мінімум 6 символів"></label>
+          <button class="cta" type="submit" id="a-submit">Увійти</button>
+          <button class="ghost" type="button" id="a-forgot" style="justify-self:center">Забули пароль?</button>
+          <p class="err" id="a-msg" role="status"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Новий пароль після листа -->
+    <section id="recover" hidden>
+      <form id="rec-form" class="card stack" novalidate>
+        <h2>Новий <em>пароль</em></h2>
+        <label class="f" for="rec-pass">Придумайте новий пароль, мінімум 6 символів<input type="password" id="rec-pass" autocomplete="new-password" minlength="6" required></label>
+        <button class="cta" type="submit">Зберегти пароль</button>
+        <p class="err" id="rec-msg" role="status"></p>
+      </form>
+    </section>
     <div id="alert"></div>
     <section id="today" role="tabpanel" hidden></section>
     <section id="recipes" role="tabpanel" hidden></section>
     <section id="progress" role="tabpanel" hidden></section>
     <section id="reg" role="tabpanel" hidden></section>
   </main>
-  <div class="foot"><span class="sync" id="sync"><i></i><span id="sync-text">Підключаємось…</span></span><span>healthy emaciation · Марафон схуднення</span></div>
+  <div class="foot" id="foot" hidden><span class="sync" id="sync"><i></i><span id="sync-text">Підключаємось…</span></span><span class="who-line">Ви увійшли як <b id="who-email"></b> <button class="ghost" type="button" id="logout">Вийти</button></span></div>
+  <p class="foot" style="justify-content:center;margin-top:12px">healthy emaciation · Марафон схуднення</p>
 </div>
 
 <dialog id="dlg" aria-labelledby="dlg-title"><div class="sheet" id="dlg-body"></div></dialog>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

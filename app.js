@@ -10,7 +10,7 @@
   var KEY = 'marathon35-v1';
 
   var S, tab = 'today', cur = 0, q = '', fMeal = '', VIEW = null;
-  var RECIPES = [];
+  var RECIPES = [], me = null, pendingName = '', saveTimer = null, writing = false, again = false;
 
   function $(id) { return document.getElementById(id); }
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 13.6 10.4 22 12 13.6 13.6 12 22 10.4 13.6 2 12 10.4 10.4Z" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
@@ -32,7 +32,6 @@
   function curDay(s) { var t = todayIdx(s); if (t == null) { var last = 0; (s || D()).days.forEach(function (d, i) { if (d.wk || d.water || Number(d.steps) || d.meals.some(Boolean)) last = i; }); return last; } return Math.max(0, Math.min(DAYS - 1, t)); }
   function fmt(d, o) { return d.toLocaleDateString('uk-UA', o || { day: 'numeric', month: 'short' }).replace('.', ''); }
 
-  function loadLocal() { try { var o = JSON.parse(localStorage.getItem(KEY) || 'null'); return valid(o) ? o : null; } catch (e) { return null; } }
   
 
   function marks(d) {
@@ -170,10 +169,10 @@
   // ---------- Анкета ----------
   var draft = null;
   function renderReg() {
-    var r = draft || S.reg || { name: '', contact: '', start: '', plan: '', w0: '', wGoal: '', height: '', water: '', why: '' };
+    var r = draft || S.reg || { name: pendingName || '', contact: '', start: '', plan: '', w0: '', wGoal: '', height: '', water: '', why: '' };
     draft = JSON.parse(JSON.stringify(r));
     var h = '';
-    h += '<div class="card reg stack">' + '<div><h2>' + (S.reg ? 'Моя <em>анкета</em>' : 'Реєстрація на <em>марафон</em>') + '</h2><p class="hello">Вітаємо в марафоні! <b>' + DAYS + ' днів</b>, <b>' + WORKOUTS + ' тренування</b>, вода, кроки й смачні рецепти. Крок за кроком ти станеш кращою версією себе.</p></div>' +
+    h += '<div class="card reg stack">' + '<div><h2>' + (S.reg ? 'Моя <em>анкета</em>' : 'Анкета <em>учасниці</em>') + '</h2><p class="hello">Вітаємо в марафоні! <b>' + DAYS + ' днів</b>, <b>' + WORKOUTS + ' тренування</b>, вода, кроки й смачні рецепти. Крок за кроком ти станеш кращою версією себе.</p></div>' +
       '<div class="grid2" style="margin-top:0"><label class="f" for="r-name">Ім’я та прізвище<input type="text" id="r-name" data-r="name" value="' + esc(r.name) + '" autocomplete="name" placeholder="Олена Коваль"></label>' +
       '<label class="f" for="r-contact">Телефон або Instagram<input type="text" id="r-contact" data-r="contact" value="' + esc(r.contact) + '" placeholder="@nickname"></label></div>' +
       '<div><h3>План калорій</h3><div class="plans">' + PLANS.map(function (p) { return '<button class="plan" type="button" data-plan="' + p + '" aria-pressed="' + (r.plan === p) + '"><b>' + p + '</b><span>ккал на день</span></button>'; }).join('') + '</div></div>' +
@@ -183,7 +182,7 @@
       '<label class="f" for="r-h">Зріст, см<input type="number" inputmode="numeric" id="r-h" data-r="height" value="' + esc(r.height) + '" placeholder="165"></label>' +
       '<label class="f" for="r-water">Норма води, мл<input type="number" inputmode="numeric" step="50" id="r-water" data-r="water" value="' + esc(r.water) + '" placeholder="' + (Number(r.w0) ? Math.round(r.w0 * 30 / 50) * 50 : 2000) + '"></label></div>' +
       '<label class="f" for="r-why">Яка ваша ціль на марафон<textarea id="r-why" data-r="why" placeholder="Наприклад: звикнути до тренувань і пити достатньо води">' + esc(r.why) + '</textarea></label>' +
-      '<p class="err" id="r-err"></p><button class="cta" type="button" id="r-save">' + (S.reg ? 'Зберегти зміни' : 'Зареєструватися') + '</button></div>';
+      '<p class="err" id="r-err"></p><button class="cta" type="button" id="r-save">' + (S.reg ? 'Зберегти зміни' : 'Зберегти анкету') + '</button></div>';
     $('reg').innerHTML = h;
   }
   function saveReg() {
@@ -207,6 +206,7 @@
     tab = t;
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); });
     ['today', 'recipes', 'progress', 'reg'].forEach(function (id) { $(id).hidden = id !== t; });
+    screen('app');
     render(); window.scrollTo(0, 0); enter(t);
   }
   var enterTimer = null;
@@ -278,18 +278,129 @@
     if (el.dataset.pick != null) { d.pick[Number(el.dataset.pick)] = el.value; touch(); renderToday(); }
   });
   // ---------- Збереження ----------
-  // Усе зберігається тільки в браузері цього телефона чи комп'ютера
+  // Трекер зберігається в акаунті (Supabase) і копією в браузері, щоб працював і без інтернету
+  var cfg = window.TRACKER_CONFIG || {};
+  var sb = window.supabase && cfg.supabaseUrl && cfg.supabaseAnonKey && cfg.supabaseUrl.indexOf('ВАШ') < 0
+    ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
+  function localKey() { return KEY + (me ? '-' + me.id : ''); }
+  function loadMine() { try { var o = JSON.parse(localStorage.getItem(localKey()) || 'null'); return valid(o) ? o : null; } catch (e) { return null; } }
+  // Відмітки, зроблені до появи входу з поштою, підхоплюються з цього пристрою
+  function loadOld() { try { var o = JSON.parse(localStorage.getItem(KEY) || 'null'); return valid(o) ? o : null; } catch (e) { return null; } }
   function syncState(k, t) { $('sync').className = 'sync' + (k ? ' ' + k : ''); $('sync-text').textContent = t; }
   function touch() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); syncState('on', 'Збережено на цьому пристрої'); }
-    catch (e) { syncState('err', 'Браузер не дає зберегти. Вимкніть режим інкогніто'); }
+    try { localStorage.setItem(localKey(), JSON.stringify(S)); } catch (e) {}
+    if (!sb || !me) return;
+    syncState('on', 'Зберігаємо…'); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 900);
+  }
+  function flush() {
+    if (writing) { again = true; return; }
+    writing = true;
+    sb.from('trackers').upsert({ user_id: me.id, data: S }).then(function (r) {
+      writing = false;
+      if (r.error) { syncState('err', 'Не вдалося зберегти. Перевірте інтернет, спробуємо ще раз'); setTimeout(flush, 4000); return; }
+      syncState('on', 'Збережено');
+      if (again) { again = false; flush(); }
+    });
   }
 
+  // ---------- Екрани ----------
+  function screen(name) {
+    $('loading').hidden = name !== 'loading';
+    $('auth').hidden = name !== 'auth';
+    $('recover').hidden = name !== 'recover';
+    $('tabs').hidden = $('foot').hidden = name !== 'app';
+    if (name !== 'app') { ['today', 'recipes', 'progress', 'reg'].forEach(function (id) { $(id).hidden = true; }); $('who').textContent = ''; }
+  }
+
+  // ---------- Вхід і реєстрація ----------
+  var mode = 'login';
+  function authMsg(t, kind) { var m = $('a-msg'); m.textContent = t || ''; m.style.color = kind === 'ok' ? 'var(--sage-ink)' : ''; }
+  function setMode(m) {
+    mode = m;
+    $('a-login').setAttribute('aria-pressed', String(m !== 'signup'));
+    $('a-signup').setAttribute('aria-pressed', String(m === 'signup'));
+    $('a-name-wrap').hidden = m !== 'signup';
+    $('a-pass-wrap').hidden = m === 'forgot';
+    $('a-forgot').hidden = m !== 'login';
+    $('a-pass').autocomplete = m === 'signup' ? 'new-password' : 'current-password';
+    $('a-title').innerHTML = m === 'login' ? 'Вхід у <em>трекер</em>' : m === 'signup' ? 'Реєстрація на <em>марафон</em>' : 'Відновлення <em>пароля</em>';
+    $('a-submit').textContent = m === 'login' ? 'Увійти' : m === 'signup' ? 'Зареєструватися' : 'Надіслати лист';
+    authMsg(m === 'forgot' ? 'Вкажіть email, і ми надішлемо посилання для нового пароля.' : '', 'ok');
+  }
+  $('a-login').addEventListener('click', function () { setMode('login'); });
+  $('a-signup').addEventListener('click', function () { setMode('signup'); });
+  $('a-forgot').addEventListener('click', function () { setMode('forgot'); });
+  function uaError(err) {
+    var m = (err && err.message || '').toLowerCase();
+    if (m.indexOf('invalid login') >= 0) return 'Неправильний email або пароль.';
+    if (m.indexOf('already registered') >= 0 || m.indexOf('already been registered') >= 0) return 'Цей email уже зареєстрований. Перейдіть на вкладку «Вхід».';
+    if (m.indexOf('password') >= 0 && m.indexOf('6') >= 0) return 'Пароль має бути не коротший за 6 символів.';
+    if (m.indexOf('email not confirmed') >= 0) return 'Email ще не підтверджено. Перевірте пошту.';
+    if (m.indexOf('rate limit') >= 0) return 'Забагато спроб. Зачекайте трохи й спробуйте знову.';
+    if (m.indexOf('invalid') >= 0 && m.indexOf('email') >= 0) return 'Перевірте email: схоже, в ньому помилка.';
+    return 'Не вийшло: ' + (err && err.message || 'невідома помилка');
+  }
+  $('auth-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = $('a-email').value.trim(), pass = $('a-pass').value, btn = $('a-submit');
+    if (!email) return authMsg('Вкажіть email.');
+    if (mode !== 'forgot' && pass.length < 6) return authMsg('Пароль має бути не коротший за 6 символів.');
+    if (mode === 'signup' && !$('a-name').value.trim()) return authMsg('Напишіть, як вас звати.');
+    btn.disabled = true; authMsg('Секунду…', 'ok');
+    var p;
+    if (mode === 'login') p = sb.auth.signInWithPassword({ email: email, password: pass });
+    else if (mode === 'signup') { pendingName = $('a-name').value.trim(); p = sb.auth.signUp({ email: email, password: pass }); }
+    else p = sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    p.then(function (r) {
+      btn.disabled = false;
+      if (r.error) return authMsg(uaError(r.error));
+      if (mode === 'forgot') return authMsg('Готово. Перевірте пошту й перейдіть за посиланням з листа.', 'ok');
+      if (mode === 'signup' && !r.data.session) return authMsg('Ми надіслали лист для підтвердження. Відкрийте його й поверніться сюди.', 'ok');
+    });
+  });
+  $('rec-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pass = $('rec-pass').value;
+    if (pass.length < 6) { $('rec-msg').textContent = 'Пароль має бути не коротший за 6 символів.'; return; }
+    sb.auth.updateUser({ password: pass }).then(function (r) {
+      if (r.error) { $('rec-msg').textContent = uaError(r.error); return; }
+      history.replaceState(null, '', location.pathname);
+      sb.auth.getSession().then(function (s) { enterApp(s.data.session); });
+    });
+  });
+  $('logout').addEventListener('click', function () { sb.auth.signOut(); });
+
   // ---------- Запуск ----------
-  S = loadLocal() || blank();
-  cur = curDay(S);
-  syncState(loadLocal() ? 'on' : '', loadLocal() ? 'Збережено на цьому пристрої' : 'Відмітки зберігаються на цьому пристрої');
-  fetch('recipes.json').then(function (r) { return r.json(); }).then(function (data) { RECIPES = data; }, function () {
+  var recipesReady = fetch('recipes.json').then(function (r) { return r.json(); }).then(function (data) { RECIPES = data; }, function () {
     $('alert').innerHTML = '<div class="alert">Не вдалося завантажити рецепти. Перевірте інтернет і оновіть сторінку.</div>';
-  }).then(function () { $('loading').hidden = true; show(S.reg ? 'today' : 'reg'); });
+  });
+  function enterApp(session) {
+    if (!session) { me = null; S = null; screen('auth'); setMode('login'); return; }
+    if (me && me.id === session.user.id && S) { screen('app'); return; }
+    me = session.user; screen('loading');
+    $('who-email').textContent = me.email;
+    Promise.all([sb.from('trackers').select('data').eq('user_id', me.id).maybeSingle(), recipesReady]).then(function (r) {
+      var row = r[0].data, local = loadMine() || loadOld();
+      S = row && valid(row.data) ? row.data : local || blank();
+      cur = curDay(S); draft = null;
+      if (r[0].error) syncState('err', 'Не вдалося завантажити трекер. Оновіть сторінку');
+      else syncState('on', row ? 'Збережено' : 'Готово');
+      if (!row) flush();
+      show(S.reg ? 'today' : 'reg');
+    });
+  }
+  if (!sb) {
+    screen('auth');
+    $('auth-form').hidden = true;
+    $('auth').querySelector('.auth-card').insertAdjacentHTML('beforeend', '<p class="err">Сайт ще не підключений до бази. Впишіть ключі Supabase у файл config.js.</p>');
+    return;
+  }
+  sb.auth.onAuthStateChange(function (event, session) {
+    if (event === 'PASSWORD_RECOVERY') { screen('recover'); return; }
+    if (event === 'SIGNED_OUT') { enterApp(null); return; }
+    if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      // Supabase радить не робити запити прямо в цьому обробнику
+      setTimeout(function () { if ($('recover').hidden) enterApp(session); }, 0);
+    }
+  });
 })();
