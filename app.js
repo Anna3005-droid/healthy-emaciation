@@ -48,7 +48,7 @@
     }).join('') + '</div>';
     var sub = ti == null ? (VIEW ? 'Дату старту не вказано' : 'Вкажіть дату старту в анкеті, і тут з’являться дати') : ti < 0 ? 'Старт ' + fmt(dayDate(0), { day: 'numeric', month: 'long' }) + ', до початку ' + (-ti) + ' ' + plural(-ti, 'день', 'дні', 'днів') : fmt(dayDate(cur), { weekday: 'long', day: 'numeric', month: 'long' });
     var plan0 = planNo(cur);
-    sub += '<br><span class="plan-line">' + (plan0 ? 'За планом тренування ' + plan0 + ' з ' + WORKOUTS : 'За планом вихідний: відпочинок, вода і кроки') + '</span>';
+    sub += '<br><span class="plan-line">' + (plan0 ? 'За планом тренування ' + plan0 + ' з ' + WORKOUTS : 'За планом вихідний від тренування. Вода, кроки й харчування як завжди') + '</span>';
     h += frame('<div class="dayhead"><div class="eyebrow">Марафон</div><h2>День ' + (cur + 1) + ' <em>з ' + DAYS + '</em></h2><p>' + sub + '</p></div>');
     h += '<div class="stack">';
 
@@ -61,9 +61,9 @@
 
     var wkDone = s.days.filter(function (x) { return x.wk; }).length;
     h += '<div class="card work"><div class="head"><h3>Тренування</h3><span class="big">' + wkDone + ' <small>з ' + WORKOUTS + ' за марафон</small></span></div>' +
-      (plan0 ? '' : '<p class="note" style="margin:0 0 10px">Сьогодні вихідний. Якщо все ж позаймалися, відмітьте тренування нижче.</p>') +
+      (plan0 ? '' : '<p class="note" style="margin:0 0 10px">Сьогодні вихідний тільки від тренування. Якщо все ж позаймалися, відмітьте нижче.</p>') +
       '<button class="toggle" type="button" id="wk" aria-pressed="' + !!d.wk + '"' + dis() + '><span class="box"></span><span>Тренування виконано<small>' + (d.wk ? 'Чудово, тренування зараховано' : 'Натисніть, коли позаймалися') + '</small></span></button>' +
-      '<label class="f" for="d-cx" style="margin-top:12px">Який комплекс робили<select id="d-cx" data-cx="1"' + dis() + '><option value="">Оберіть комплекс' + (plan0 ? ' (за планом: Комплекс ' + plan0 + ')' : '') + '</option>' + Array.from({ length: COMPLEXES }, function (_, k) { return '<option value="' + (k + 1) + '"' + (String(d.cx) === String(k + 1) ? ' selected' : '') + '>Комплекс ' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f" for="d-cx" style="margin-top:12px">Який комплекс робили<select id="d-cx" data-cx="1"' + dis() + '><option value="">' + (plan0 ? 'За планом: Комплекс ' + plan0 : 'Оберіть комплекс') + '</option>' + Array.from({ length: COMPLEXES }, function (_, k) { return '<option value="' + (k + 1) + '"' + (String(d.cx) === String(k + 1) ? ' selected' : '') + '>Комплекс ' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
       '<div class="grid2"><div><h3 style="margin:4px 0 8px">Що робили</h3><div class="seg">' + KINDS.map(function (k) { return '<button type="button" data-kind="' + k + '" aria-pressed="' + (d.kind === k) + '"' + dis() + '>' + k + '</button>'; }).join('') + '</div></div>' +
       '<label class="f" for="d-min">Хвилин<input type="number" inputmode="numeric" min="0" id="d-min" data-bind="min" value="' + esc(d.min) + '" placeholder="30"' + dis() + '></label></div></div>';
     h += '<div class="card steps"><div class="head"><h3>Кроки</h3><span class="big" id="st-big">' + (Number(d.steps) ? Number(d.steps).toLocaleString('uk-UA') : '0') + ' <small>кроків</small></span></div>' +
