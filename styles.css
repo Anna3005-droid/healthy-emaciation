@@ -181,6 +181,9 @@ dialog::backdrop { background: rgba(43, 36, 33, .45); }
 .cover { display: block; width: 100%; max-width: 100%; border-radius: 18px; aspect-ratio: 860 / 1300; object-fit: cover; object-position: top; max-height: 420px; }
 .hero-logo { width: 150px; height: auto; display: block; margin: 0 auto 8px; }
 .reg h2 { margin-bottom: 4px; }
+.hello { margin: 4px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink); max-width: 46ch; }
+.hello b { color: var(--rose-ink); font-weight: 600; }
+
 .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .plan { border: 1px solid var(--line); background: var(--bg); border-radius: 16px; padding: 12px; text-align: left; cursor: pointer; }
 .plan b { display: block; font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.05; }

@@ -173,7 +173,7 @@
     var r = draft || S.reg || { name: '', contact: '', start: '', plan: '', w0: '', wGoal: '', height: '', water: '', why: '' };
     draft = JSON.parse(JSON.stringify(r));
     var h = '';
-    h += '<div class="card reg stack">' + '<div><h2>' + (S.reg ? 'Моя <em>анкета</em>' : 'Реєстрація на <em>марафон</em>') + '</h2><p class="note" style="margin:0">' + DAYS + ' днів, ' + WORKOUTS + ' тренувань: 2 дні тренування, 1 день відпочинку. ' + 'Анкета й відмітки зберігаються тільки на цьому пристрої.' + '</p></div>' +
+    h += '<div class="card reg stack">' + '<div><h2>' + (S.reg ? 'Моя <em>анкета</em>' : 'Реєстрація на <em>марафон</em>') + '</h2><p class="hello">Вітаємо в марафоні! <b>' + DAYS + ' днів</b>, <b>' + WORKOUTS + ' тренування</b>, вода, кроки й смачні рецепти. Крок за кроком ти станеш кращою версією себе.</p></div>' +
       '<div class="grid2" style="margin-top:0"><label class="f" for="r-name">Ім’я та прізвище<input type="text" id="r-name" data-r="name" value="' + esc(r.name) + '" autocomplete="name" placeholder="Олена Коваль"></label>' +
       '<label class="f" for="r-contact">Телефон або Instagram<input type="text" id="r-contact" data-r="contact" value="' + esc(r.contact) + '" placeholder="@nickname"></label></div>' +
       '<div><h3>План калорій</h3><div class="plans">' + PLANS.map(function (p) { return '<button class="plan" type="button" data-plan="' + p + '" aria-pressed="' + (r.plan === p) + '"><b>' + p + '</b><span>ккал на день</span></button>'; }).join('') + '</div></div>' +
