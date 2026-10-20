@@ -31,8 +31,9 @@ header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; b
 .brand .mark { width: 50px; height: auto; flex: 0 0 auto; }
 .brand .word { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
 .brand .word b { font-family: var(--display); font-weight: 500; font-size: 25px; letter-spacing: .02em; }
-.brand .word span { font-family: var(--display); font-size: 15px; color: var(--rose-ink); letter-spacing: .22em; margin-top: 2px; }
+.brand .word span { font-family: var(--display); font-size: 15px; color: var(--rose-ink); letter-spacing: .14em; margin-top: 2px; white-space: nowrap; }
 .brand .meta { margin-left: auto; text-align: right; min-width: 0; }
+@media (max-width: 400px) { .brand .meta .eyebrow { letter-spacing: .2em; } .brand .word b { font-size: 23px; } }
 .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--rose-ink); }
 .who { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
 nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding-block: 12px; scrollbar-width: none; border-bottom: 1px solid var(--line); }

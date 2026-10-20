@@ -1,4 +1,4 @@
--- Марафон healthy emaciation: база даних для входу з поштою.
+-- Марафон Healthy Weight Loss: база даних для входу з поштою.
 -- Виконайте один раз у Supabase: SQL Editor -> New query -> вставити -> Run.
 create table if not exists public.trackers (
   user_id uuid primary key references auth.users(id) on delete cascade,
