@@ -13,13 +13,13 @@
 2. SQL Editor → New query → вставте весь файл `supabase/schema.sql` → Run.
 3. Authentication → Sign In / Providers → Email: вимкніть **Confirm email** і збережіть.
    Інакше кожній учасниці прийде лист, а безкоштовна пошта Supabase надсилає лише кілька листів на годину.
-4. Authentication → URL Configuration → **Site URL** = `https://healthy-emaciation.vercel.app`. Це для листів «Забули пароль».
+4. Authentication → URL Configuration → **Site URL** = `https://healthy-weight-loss.vercel.app`. Це для листів «Забули пароль».
 5. Project Settings → API: скопіюйте **Project URL** і **Publishable key** і впишіть їх у `config.js`.
 
 ## Публікація на Vercel
 1. Увійдіть на https://vercel.com через GitHub.
 2. Add New → Project → виберіть цей репозиторій → Deploy. Налаштування міняти не потрібно.
-3. Скопіюйте адресу сайту, наприклад `https://healthy-emaciation.vercel.app`, і надсилайте її учасницям.
+3. Скопіюйте адресу сайту, наприклад `https://healthy-weight-loss.vercel.app`, і надсилайте її учасницям.
 
 Кожна зміна, надіслана на GitHub, Vercel публікує сам приблизно за хвилину.
 
