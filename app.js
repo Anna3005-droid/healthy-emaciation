@@ -10,7 +10,7 @@
   var KEY = 'marathon35-v1';
 
   var S, tab = 'today', cur = 0, q = '', fMeal = '', VIEW = null;
-  var RECIPES = [], me = null, pendingName = '', saveTimer = null, writing = false, again = false;
+  var RECIPES = [], BYID = {}, me = null, pendingName = '', saveTimer = null, writing = false, again = false;
 
   function $(id) { return document.getElementById(id); }
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 13.6 10.4 22 12 13.6 13.6 12 22 10.4 13.6 2 12 10.4 10.4Z" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
@@ -70,9 +70,9 @@
       '<p class="note" style="margin:8px 0 0">Подивіться в застосунку на телефоні (Google Fit, Samsung Health, «Здоров’я» на iPhone) або у фітнес-браслеті й перепишіть число сюди ввечері.</p></div>';
 
     h += '<div class="card food"><div class="head"><h3>Харчування</h3><span class="note" style="margin:0">' + (plan() ? 'План ' + plan() + ' ккал' : 'План не обрано') + '</span></div><div class="meals">' + MEALS.map(function (m, k) {
-      var opts = RECIPES.map(function (r, ri) { return r.m.indexOf(m) === 0 ? '<option value="' + ri + '"' + (String(d.pick[k]) === String(ri) ? ' selected' : '') + '>' + esc(r.t) + '</option>' : ''; }).join('');
+      var opts = RECIPES.map(function (r) { return r.m.indexOf(m) === 0 ? '<option value="' + r.id + '"' + (d.pick[k] === r.id ? ' selected' : '') + '>' + esc(r.t) + '</option>' : ''; }).join('');
       var isOwn = d.pick[k] === 'own', ow = (d.own && d.own[k]) || {};
-      var pr = d.pick[k] !== '' && !isOwn ? RECIPES[d.pick[k]] : null;
+      var pr = d.pick[k] !== '' && !isOwn ? BYID[d.pick[k]] || null : null;
       var ownF = function (f, label, ph, mode) { return '<label class="f" for="o-' + k + '-' + f + '">' + label + '<input type="' + (f === 'name' ? 'text' : 'number') + '"' + (mode ? ' inputmode="' + mode + '" min="0"' : '') + ' id="o-' + k + '-' + f + '" data-own="' + k + '" data-of="' + f + '" value="' + esc(ow[f] || '') + '" placeholder="' + ph + '"' + dis() + '></label>'; };
       var ownBox = isOwn ? '<div class="own"><p class="note">Опишіть, що з’їли: назва, вага порції і калорійність. Калорійність можна подивитися на упаковці або в застосунку для підрахунку калорій.</p>' +
         ownF('name', 'Що за страва', 'Наприклад, гречка з куркою') +
@@ -80,7 +80,7 @@
         '<div class="ownrow ownrow3">' + ownF('p', 'Білки, г', '25', 'decimal') + ownF('f', 'Жири, г', '8', 'decimal') + ownF('c', 'Вуглеводи, г', '35', 'decimal') + '</div></div>' : '';
       return '<div class="meal"><input type="checkbox" id="m-' + k + '" data-meal="' + k + '"' + (d.meals[k] ? ' checked' : '') + dis() + ' aria-label="' + m + ' з’їдено">' +
         '<div class="mt"><b>' + m + (pr ? ' · ' + esc(portionFor(pr)) : '') + (isOwn && Number(ow.kcal) ? ' · ' + Number(ow.kcal) + ' ккал' : '') + '</b><select id="p-' + k + '" data-pick="' + k + '" aria-label="Страва на ' + m.toLowerCase() + '"' + dis() + '><option value="">Оберіть страву з книги</option><option value="own"' + (isOwn ? ' selected' : '') + '>Своя страва, не з книги</option>' + opts + '</select>' + ownBox + '</div>' +
-        (pr ? '<button class="ghost open" type="button" data-recipe="' + d.pick[k] + '">Рецепт</button>' : '') + '</div>';
+        (pr ? (pr.img ? '<button class="thumb" type="button" data-recipe="' + pr.id + '" aria-label="Рецепт: ' + esc(pr.t) + '"><img src="img/recipes/' + pr.img + '.jpg" alt="" loading="lazy" width="56" height="56"></button>' : '<button class="ghost open" type="button" data-recipe="' + pr.id + '">Рецепт</button>') : '') + '</div>';
     }).join('') + '</div></div>';
 
     h += '<div class="card"><div class="grid2" style="margin-top:0"><label class="f" for="d-weight">Вага зранку, кг<input type="number" inputmode="decimal" step="0.1" id="d-weight" data-bind="weight" value="' + esc(d.weight) + '" placeholder="необов’язково"' + dis() + '></label>' +
@@ -108,22 +108,23 @@
   }
   function renderList() {
     var t = q.trim().toLowerCase(), out = [];
-    RECIPES.forEach(function (r, i) {
+    RECIPES.forEach(function (r) {
       if (fMeal && r.s !== fMeal) return;
-      if (t && (r.t + ' ' + r.ing.join(' ')).toLowerCase().indexOf(t) < 0) return;
-      out.push('<button class="rc" type="button" data-recipe="' + i + '"><b>' + esc(r.t) + '</b><span><span class="tag">' + esc(r.m || r.s) + '</span>' + (portionFor(r) ? ' · ваша порція ' + esc(portionFor(r)) : '') + '</span></button>');
+      if (t && (r.t + ' ' + r.ing.join(' ') + ' ' + r.st.join(' ')).toLowerCase().indexOf(t) < 0) return;
+      out.push('<button class="rc" type="button" data-recipe="' + r.id + '">' + (r.img ? '<img src="img/recipes/' + r.img + '.jpg" alt="" loading="lazy" width="72" height="72">' : '<i class="noimg" aria-hidden="true"></i>') + '<span class="rt"><b>' + esc(r.t) + '</b><span><span class="tag">' + esc(r.m || r.s) + '</span>' + (portionFor(r) ? ' · ваша порція ' + esc(portionFor(r)) : '') + '</span></span></button>');
     });
     $('rlist').innerHTML = out.join('') || '<div class="empty">Нічого не знайшлося. Спробуйте інше слово.</div>';
     $('rcount').textContent = 'Знайдено: ' + out.length;
   }
-  function openRecipe(i) {
-    var r = RECIPES[i], p = plan(), h = '';
-    h += '<button class="ghost x" type="button" data-close>Закрити</button><span class="tag">' + esc(r.m || r.s) + '</span><h2 id="dlg-title" style="margin-top:8px">' + esc(r.t) + '</h2>';
+  function openRecipe(id) {
+    var r = BYID[id], p = plan(), h = '';
+    if (!r) return;
+    h += '<button class="ghost x" type="button" data-close>Закрити</button>' + (r.img ? '<img class="hero" src="img/recipes/' + r.img + '.jpg" alt="' + esc(r.t) + '" width="560" height="560">' : '') + '<span class="tag">' + esc(r.m || r.s) + '</span><h2 id="dlg-title" style="margin-top:8px">' + esc(r.t) + '</h2>';
     if (r.k) h += '<div class="kbju"><span><b>' + (r.k['К'] || '-') + '</b>ккал / 100 г</span><span><b>' + (r.k['Б'] || '-') + '</b>білки</span><span><b>' + (r.k['Ж'] || '-') + '</b>жири</span><span><b>' + (r.k['В'] || '-') + '</b>вуглеводи</span></div>';
     if (r.p.length) h += '<h3>Порція за планом</h3><div class="portions">' + r.p.map(function (x) { return '<div class="' + (x[0] === p ? 'mine' : '') + '"><b>' + x[0] + ' ккал' + (x[0] === p ? ' · ваш' : '') + '</b>' + esc(x[1]) + '</div>'; }).join('') + '</div>';
     if (r.n.length) h += '<p class="extra">' + r.n.map(esc).join('<br>') + '</p>';
     if (r.ing.length) h += '<h3>Інгредієнти</h3><ul>' + r.ing.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
-    if (r.st.length) h += '<h3>Приготування</h3><ol>' + r.st.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>';
+    if (r.st.length) h += '<h3>' + (r.ing.length ? 'Приготування' : 'Варіанти') + '</h3><ol>' + r.st.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>';
     $('dlg-body').innerHTML = h;
     var dl = $('dlg'); if (dl.showModal) dl.showModal(); else dl.setAttribute('open', '');
   }
@@ -248,7 +249,7 @@
     if (t.hasAttribute('data-close')) return $('dlg').close ? $('dlg').close() : $('dlg').removeAttribute('open');
     if (t.classList.contains('tab')) return show(t.dataset.tab);
     if (t.dataset.go) return show(t.dataset.go);
-    if (t.dataset.recipe != null) return openRecipe(Number(t.dataset.recipe));
+    if (t.dataset.recipe != null) return openRecipe(t.dataset.recipe);
     if (t.dataset.day != null) { cur = Number(t.dataset.day); return renderToday(); }
     if (t.dataset.cell != null) { cur = Number(t.dataset.cell); return show('today'); }
     if (t.dataset.cat != null) { fMeal = t.dataset.cat; document.querySelectorAll('[data-cat]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.cat === fMeal)); }); return renderList(); }
@@ -370,8 +371,16 @@
   });
   $('logout').addEventListener('click', function () { sb.auth.signOut(); });
 
+  // Старі відмітки зберігали номер страви в списку; тепер у кожної страви постійний id з книги
+  var LEGACY = ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b11", "b12", "b13", "b14", "b15", "b16", "b17", "b18", "b19", "b20", "b21", "b22", "b23", "b24", "b25", "b26", "b27", "b28", "b29", "b30", "b31", "b32", "b33", "b34", "b35", "b36", "b37", "b38", "b39", "b40", "b41", "b42", "b43", "b44", "b45", "b46", "b47", "b48", "b49", "b50", "b51", "b52", "b53", "b54", "b55", "b56", "b57", "b58", "b59", "b60", "b61", "b62", "b63", "b64", "b65", "b66", "b67", "b68", "b69", "b70", "b71", "b72", "b73", "b74", "b75", "b76", "b77", "b78", "b79", "b80", "b81", "b82", "b83", "b84", "b85", "b86", "b87", "b88", "b89", "b90", "b91", "b92", "b93", "b94", "b95", "b96", "b97", "b10", "b98", "b99", "b100", "b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b113", "b114", "b115", "b116", "b117", "b118", "b119", "b120", "b121", "b122", "b123", "b124", "b125", "b126", "b127", "b128", "b129", "b130", "b131", "b132", "b133", "b134", "b135", "b136", "b137", "b138", "b139", "b140", "b141", "b142", "b143", "b144", "b145", "b146", "b147", "b148", "b149", "b150", "b151", "b152", "b153", "b154", "b155", "b156", "b157", "b158", "b159", "b160", "b161", "b162", "b163", "b164", "b165", "b166", "b167", "b168", "b169", "b170", "b171", "b172", "b173", "b174", "b175", "b176", "b177", "b178", "b179", "b180", "b181", "b182", "b183", "b184", "b185", "b186", "b187", "b188", "b189", "b190", "b191", "b192", "b193", "b194", "b195", "b196", "b197", "b198", "b199", "b200", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212", "b213", "b214", "b215", "b216", "b217", "b218", "b219", "b220", "b221", "b222", "b223", "b224", "b225", "b226", "b227", "b228", "b229", "b230", "b231", "b232", "b233", "b234", "b235", "b236", "b237", "b238", "b239", "b240", "b241", "b242", "b243", "b244", "b245", "b246", "b247", "b248", "b249", "b250", "b251", "b252", "b253", "b254", "b255", "b256", "b257", "b258", "b259", "b260", "b261", "b262", "b263", "b264", "b265", "b266", "b267", "b268", "b269", "b270", "b271", "b272", "b273", "b274", "b275", "b276", "b277", "b278", "b279", "b280", "b281", "b282", "b283", "b284", "b285", "b286", "b287", "b288", "b289", "b290", "b291", "b296", "b297", "b298", "b299"];
+  function migratePicks(s) {
+    s.days.forEach(function (d) {
+      (d.pick || []).forEach(function (v, k) { if (/^\d+$/.test(String(v))) d.pick[k] = LEGACY[Number(v)] || ''; });
+    });
+  }
+
   // ---------- Запуск ----------
-  var recipesReady = fetch('recipes.json').then(function (r) { return r.json(); }).then(function (data) { RECIPES = data; }, function () {
+  var recipesReady = fetch('recipes.json').then(function (r) { return r.json(); }).then(function (data) { RECIPES = data; data.forEach(function (r) { BYID[r.id] = r; }); }, function () {
     $('alert').innerHTML = '<div class="alert">Не вдалося завантажити рецепти. Перевірте інтернет і оновіть сторінку.</div>';
   });
   function enterApp(session) {
@@ -382,6 +391,7 @@
     Promise.all([sb.from('trackers').select('data').eq('user_id', me.id).maybeSingle(), recipesReady]).then(function (r) {
       var row = r[0].data, local = loadMine() || loadOld();
       S = row && valid(row.data) ? row.data : local || blank();
+      migratePicks(S);
       cur = curDay(S); draft = null;
       if (r[0].error) syncState('err', 'Не вдалося завантажити трекер. Оновіть сторінку');
       else syncState('on', row ? 'Збережено' : 'Готово');
