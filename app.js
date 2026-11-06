@@ -10,7 +10,7 @@
   var KEY = 'marathon35-v1';
 
   var S, tab = 'today', cur = 0, q = '', fMeal = '', VIEW = null;
-  var RECIPES = [], BYID = {}, me = null, pendingName = '', saveTimer = null, writing = false, again = false;
+  var RECIPES = [], BYID = {}, cloudOK = false, me = null, pendingName = '', saveTimer = null, writing = false, again = false;
 
   function $(id) { return document.getElementById(id); }
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 13.6 10.4 22 12 13.6 13.6 12 22 10.4 13.6 2 12 10.4 10.4Z" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
@@ -290,7 +290,7 @@
   function syncState(k, t) { $('sync').className = 'sync' + (k ? ' ' + k : ''); $('sync-text').textContent = t; }
   function touch() {
     try { localStorage.setItem(localKey(), JSON.stringify(S)); } catch (e) {}
-    if (!sb || !me) return;
+    if (!sb || !me || !cloudOK) return;
     syncState('on', 'Зберігаємо…'); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 900);
   }
   function flush() {
@@ -383,20 +383,30 @@
   var recipesReady = fetch('recipes.json').then(function (r) { return r.json(); }).then(function (data) { RECIPES = data; data.forEach(function (r) { BYID[r.id] = r; }); }, function () {
     $('alert').innerHTML = '<div class="alert">Не вдалося завантажити рецепти. Перевірте інтернет і оновіть сторінку.</div>';
   });
+  // Не чекаємо базу вічно: якщо вона мовчить (наприклад, проєкт Supabase на паузі), працюємо з копією на телефоні
+  function withTimeout(p, ms) {
+    return Promise.race([Promise.resolve(p).catch(function (e) { return { data: null, error: e || { message: 'network' } }; }),
+      new Promise(function (res) { setTimeout(function () { res({ data: null, error: { message: 'timeout' } }); }, ms); })]);
+  }
   function enterApp(session) {
     if (!session) { me = null; S = null; screen('auth'); setMode('login'); return; }
     if (me && me.id === session.user.id && S) { screen('app'); return; }
     me = session.user; screen('loading');
     $('who-email').textContent = me.email;
-    Promise.all([sb.from('trackers').select('data').eq('user_id', me.id).maybeSingle(), recipesReady]).then(function (r) {
-      var row = r[0].data, local = loadMine() || loadOld();
+    Promise.all([withTimeout(sb.from('trackers').select('data').eq('user_id', me.id).maybeSingle(), 10000), recipesReady]).then(function (r) {
+      var res = r[0] || {}, row = res.data, local = loadMine() || loadOld();
+      cloudOK = !res.error;
       S = row && valid(row.data) ? row.data : local || blank();
       migratePicks(S);
       cur = curDay(S); draft = null;
-      if (r[0].error) syncState('err', 'Не вдалося завантажити трекер. Оновіть сторінку');
+      if (!cloudOK) syncState('err', 'Немає зв’язку з базою. Відмітки зберігаються на цьому телефоні, оновіть сторінку пізніше');
       else syncState('on', row ? 'Збережено' : 'Готово');
-      if (!row) flush();
+      if (cloudOK && !row) flush();
       show(S.reg ? 'today' : 'reg');
+    }).catch(function () {
+      S = S || loadMine() || loadOld() || blank(); cloudOK = false;
+      syncState('err', 'Щось пішло не так. Оновіть сторінку');
+      try { show(S.reg ? 'today' : 'reg'); } catch (e) { screen('auth'); authMsg('Не вдалося відкрити трекер. Оновіть сторінку.'); }
     });
   }
   if (!sb) {
